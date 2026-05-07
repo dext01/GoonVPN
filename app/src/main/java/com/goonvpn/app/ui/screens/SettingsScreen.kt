@@ -173,7 +173,7 @@ fun SettingsScreen(
             InfoRow("Протокол", "VLESS + Reality")
             InfoRow("Ядро", "Xray-core 25.9.11")
             InfoRow("Туннель", "HEV-socks5-tunnel")
-            InfoRow("Версия", "1.2.0")
+            InfoRow("Версия", "1.5.0")
         }
 
         Spacer(Modifier.height(24.dp))

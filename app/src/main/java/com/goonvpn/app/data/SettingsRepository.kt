@@ -81,3 +81,5 @@ class SettingsRepository(context: Context) {
         private const val KEY_ROUTING_MODE     = "routing_mode"
     }
 }
+
+// settings version: 2
