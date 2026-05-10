@@ -326,3 +326,5 @@ class VpnViewModel(app: Application) : AndroidViewModel(app) {
         getApplication<Application>().unregisterReceiver(receiver)
     }
 }
+
+// fix: android 14 broadcast compatibility
