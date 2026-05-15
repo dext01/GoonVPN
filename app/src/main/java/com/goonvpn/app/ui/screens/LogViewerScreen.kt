@@ -126,3 +126,5 @@ private fun readLogs(filesDir: File): String {
         "• HEV Config — конфиг HEV-туннеля"
     } else sb.toString()
 }
+
+// viewer: show xray + hev logs
