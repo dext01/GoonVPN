@@ -4,7 +4,7 @@
 
 ## Скачать
 
-**[GoonVPN-v1.3.apk](https://github.com/dext01/GoonVPN/releases/download/v1.3/GoonVPN-v1.3.apk)** — установи на Android
+**[GoonVPN-v1.4.apk](https://github.com/dext01/GoonVPN/releases/download/v1.4/GoonVPN-v1.4.apk)** — установи на Android
 
 > Требования: Android 8.0+
 
