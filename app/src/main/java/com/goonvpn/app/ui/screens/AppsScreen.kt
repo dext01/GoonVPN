@@ -41,11 +41,12 @@ data class AppEntry(
 fun AppsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val settings = remember { SettingsRepository(context) }
+    val cs = MaterialTheme.colorScheme
 
     var apps by remember { mutableStateOf<List<AppEntry>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var disallowed by remember { mutableStateOf(settings.disallowedApps) }
-    var showSystem by remember { mutableStateOf(false) }
+    var showSystem by remember { mutableStateOf(true) }
     var query by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
@@ -56,12 +57,12 @@ fun AppsScreen(onBack: () -> Unit) {
     val filtered = apps
         .filter { showSystem || !it.isSystem }
         .filter { query.isBlank() || it.label.contains(query, ignoreCase = true) }
-        .sortedBy { it.label.lowercase() }
+        .sortedWith(compareByDescending<AppEntry> { it.packageName in disallowed }.thenBy { it.label.lowercase() })
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Background)
+            .background(cs.background)
     ) {
         Row(
             modifier = Modifier
@@ -70,24 +71,21 @@ fun AppsScreen(onBack: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Назад",
-                    tint = TextSecondary
-                )
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад",
+                    tint = cs.onSurfaceVariant)
             }
             Spacer(Modifier.width(4.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "Приложения вне VPN",
                     style = MaterialTheme.typography.titleLarge,
-                    color = TextPrimary,
+                    color = cs.onBackground,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
                     text = "Трафик этих приложений пойдёт напрямую",
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
+                    color = cs.onSurfaceVariant
                 )
             }
         }
@@ -95,17 +93,17 @@ fun AppsScreen(onBack: () -> Unit) {
         OutlinedTextField(
             value = query,
             onValueChange = { query = it },
-            placeholder = { Text("Поиск", color = TextHint) },
+            placeholder = { Text("Поиск", color = cs.onSurfaceVariant.copy(alpha = 0.5f)) },
             singleLine = true,
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = AccentBlue,
-                unfocusedBorderColor = BorderColor,
-                focusedTextColor = TextPrimary,
-                unfocusedTextColor = TextPrimary,
+                unfocusedBorderColor = cs.outline,
+                focusedTextColor = cs.onBackground,
+                unfocusedTextColor = cs.onBackground,
                 cursorColor = AccentBlue,
-                focusedContainerColor = Surface,
-                unfocusedContainerColor = Surface
+                focusedContainerColor = cs.surfaceContainer,
+                unfocusedContainerColor = cs.surfaceContainer
             ),
             modifier = Modifier
                 .fillMaxWidth()
@@ -120,14 +118,17 @@ fun AppsScreen(onBack: () -> Unit) {
         ) {
             Text(
                 text = "Показать системные",
-                color = TextSecondary,
+                color = cs.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(1f)
             )
             Switch(
                 checked = showSystem,
                 onCheckedChange = { showSystem = it },
-                colors = SwitchDefaults.colors(checkedTrackColor = AccentBlue)
+                colors = SwitchDefaults.colors(
+                    checkedTrackColor = AccentBlue,
+                    uncheckedThumbColor = androidx.compose.ui.graphics.Color.White
+                )
             )
         }
 
@@ -156,11 +157,8 @@ fun AppsScreen(onBack: () -> Unit) {
                         app = app,
                         isDisallowed = isDisallowed,
                         onToggle = {
-                            disallowed = if (isDisallowed) {
-                                disallowed - app.packageName
-                            } else {
-                                disallowed + app.packageName
-                            }
+                            disallowed = if (isDisallowed) disallowed - app.packageName
+                                        else disallowed + app.packageName
                             settings.disallowedApps = disallowed
                         }
                     )
@@ -172,45 +170,37 @@ fun AppsScreen(onBack: () -> Unit) {
 
 @Composable
 private fun AppRow(app: AppEntry, isDisallowed: Boolean, onToggle: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(if (isDisallowed) CardBackgroundSelected else CardBackground)
+            .background(if (isDisallowed) AccentBlueDim else cs.surfaceContainer)
             .clickable(onClick = onToggle)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (app.icon != null) {
-            Image(
-                bitmap = app.icon.asImageBitmap(),
-                contentDescription = null,
-                modifier = Modifier.size(36.dp)
-            )
+            Image(bitmap = app.icon.asImageBitmap(), contentDescription = null,
+                modifier = Modifier.size(36.dp))
         } else {
             Spacer(Modifier.size(36.dp))
         }
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = app.label,
-                style = MaterialTheme.typography.bodyLarge,
-                color = TextPrimary,
-                maxLines = 1
-            )
-            Text(
-                text = app.packageName,
-                style = MaterialTheme.typography.bodySmall,
-                color = TextHint,
-                maxLines = 1
-            )
+            Text(text = app.label, style = MaterialTheme.typography.bodyLarge,
+                color = if (isDisallowed) androidx.compose.ui.graphics.Color.White else cs.onBackground,
+                maxLines = 1)
+            Text(text = app.packageName, style = MaterialTheme.typography.bodySmall,
+                color = if (isDisallowed) androidx.compose.ui.graphics.Color.White.copy(0.7f) else cs.onSurfaceVariant.copy(0.6f),
+                maxLines = 1)
         }
         Checkbox(
             checked = isDisallowed,
             onCheckedChange = { onToggle() },
             colors = CheckboxDefaults.colors(
                 checkedColor = AccentBlue,
-                uncheckedColor = BorderColor
+                uncheckedColor = cs.outline
             )
         )
     }

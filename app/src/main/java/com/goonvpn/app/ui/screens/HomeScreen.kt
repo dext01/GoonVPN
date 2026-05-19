@@ -56,6 +56,8 @@ fun HomeScreen(
     var showAddSheet    by remember { mutableStateOf(false) }
     var longPressServer by remember { mutableStateOf<Server?>(null) }
 
+    val cs = MaterialTheme.colorScheme
+
     val isConnected  = vpnState == VpnState.CONNECTED
     val isConnecting = vpnState == VpnState.CONNECTING
 
@@ -68,11 +70,10 @@ fun HomeScreen(
     val stateColor = when (vpnState) {
         VpnState.CONNECTED    -> ConnectedGreen
         VpnState.CONNECTING   -> ConnectingYellow
-        VpnState.DISCONNECTED -> TextHint
+        VpnState.DISCONNECTED -> cs.onSurfaceVariant
         VpnState.ERROR        -> DisconnectedRed
     }
 
-    // Пульс при подключении
     val pulseAnim = rememberInfiniteTransition(label = "pulse")
     val pulseScale by pulseAnim.animateFloat(
         initialValue = 1f, targetValue = 1.14f,
@@ -90,9 +91,8 @@ fun HomeScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Background)
+            .background(cs.background)
     ) {
-        // Фоновое свечение под кнопкой — Canvas с радиальным градиентом (без прямоугольника)
         if (isConnected) {
             Canvas(
                 modifier = Modifier
@@ -130,7 +130,7 @@ fun HomeScreen(
                 Text(
                     "GoonVPN",
                     style = MaterialTheme.typography.titleLarge,
-                    color = TextPrimary,
+                    color = cs.onBackground,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.5.sp
                 )
@@ -140,10 +140,10 @@ fun HomeScreen(
                         modifier = Modifier
                             .size(40.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(SurfaceCard)
+                            .background(cs.surfaceContainer)
                     ) {
                         Icon(Icons.Filled.Settings, null,
-                            tint = TextSecondary, modifier = Modifier.size(20.dp))
+                            tint = cs.onSurfaceVariant, modifier = Modifier.size(20.dp))
                     }
                     IconButton(
                         onClick = { showAddSheet = true },
@@ -169,23 +169,16 @@ fun HomeScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
-                    // Кнопка подключения
                     Box(contentAlignment = Alignment.Center) {
-                        // Расширяющееся кольцо при подключении
                         if (isConnecting) {
                             Box(
                                 modifier = Modifier
                                     .size(200.dp)
                                     .scale(pulseScale)
                                     .clip(CircleShape)
-                                    .border(
-                                        1.dp,
-                                        ConnectingYellow.copy(ringAlpha),
-                                        CircleShape
-                                    )
+                                    .border(1.dp, ConnectingYellow.copy(ringAlpha), CircleShape)
                             )
                         }
-                        // Внешнее кольцо
                         Box(
                             modifier = Modifier
                                 .size(180.dp)
@@ -197,25 +190,23 @@ fun HomeScreen(
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
-                            // Внутренняя кнопка
                             Box(
                                 modifier = Modifier
                                     .size(148.dp)
                                     .clip(CircleShape)
                                     .background(
                                         if (isConnected)
-                                            Brush.radialGradient(
-                                                listOf(
-                                                    ConnectedGreen.copy(0.15f),
-                                                    SurfaceCard
-                                                )
-                                            )
+                                            Brush.radialGradient(listOf(
+                                                ConnectedGreen.copy(0.15f),
+                                                cs.surfaceContainer
+                                            ))
                                         else
-                                            Brush.radialGradient(
-                                                listOf(SurfaceElevated, SurfaceCard)
-                                            )
+                                            Brush.radialGradient(listOf(
+                                                cs.surfaceContainerHigh,
+                                                cs.surfaceContainer
+                                            ))
                                     )
-                                    .border(1.dp, BorderColor, CircleShape)
+                                    .border(1.dp, cs.outline, CircleShape)
                                     .clickable {
                                         if (isConnected) onDisconnect()
                                         else if (!isConnecting) onConnect()
@@ -227,14 +218,13 @@ fun HomeScreen(
                                     contentDescription = if (isConnected) "Отключить" else "Подключить",
                                     tint = if (isConnected) ConnectedGreen
                                            else if (isConnecting) ConnectingYellow
-                                           else TextSecondary,
+                                           else cs.onSurfaceVariant,
                                     modifier = Modifier.size(52.dp)
                                 )
                             }
                         }
                     }
 
-                    // Статус
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         AnimatedContent(targetState = statusText, label = "st") { text ->
                             Text(
@@ -249,7 +239,7 @@ fun HomeScreen(
                             Text(
                                 connectionTime,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = TextSecondary,
+                                color = cs.onSurfaceVariant,
                                 fontWeight = FontWeight.Medium
                             )
                         }
@@ -265,7 +255,6 @@ fun HomeScreen(
                     .padding(bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Трафик
                 if (isConnected) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -293,8 +282,8 @@ fun HomeScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
-                        .background(SurfaceCard)
-                        .border(1.dp, BorderColor, RoundedCornerShape(16.dp))
+                        .background(cs.surfaceContainer)
+                        .border(1.dp, cs.outline, RoundedCornerShape(16.dp))
                         .combinedClickable(
                             onClick = {},
                             onLongClick = { selectedServer?.let { longPressServer = it } }
@@ -302,22 +291,19 @@ fun HomeScreen(
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        selectedServer?.flag ?: "🌐",
-                        fontSize = 26.sp
-                    )
+                    Text(selectedServer?.flag ?: "🌐", fontSize = 26.sp)
                     Spacer(Modifier.width(14.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             "Активный сервер",
                             style = MaterialTheme.typography.labelSmall,
-                            color = TextHint
+                            color = cs.onSurfaceVariant.copy(alpha = 0.6f)
                         )
                         Text(
                             selectedServer?.let { "${it.country} · ${it.name}" }
                                 ?: "Нет серверов — нажмите +",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = TextPrimary,
+                            color = cs.onBackground,
                             fontWeight = FontWeight.Medium
                         )
                     }
@@ -332,8 +318,8 @@ fun HomeScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
-                            .background(SurfaceCard)
-                            .border(1.dp, BorderColor, RoundedCornerShape(16.dp))
+                            .background(cs.surfaceContainer)
+                            .border(1.dp, cs.outline, RoundedCornerShape(16.dp))
                             .clickable {
                                 val idx = servers.indexOfFirst { it.id == selectedServer?.id }
                                 onServerSelect(servers[(idx + 1) % servers.size])
@@ -346,12 +332,12 @@ fun HomeScreen(
                         Spacer(Modifier.width(12.dp))
                         Text(
                             "Следующий сервер  (${servers.size} доступно)",
-                            color = TextSecondary,
+                            color = cs.onSurfaceVariant,
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.weight(1f)
                         )
                         Icon(Icons.Filled.ChevronRight, null,
-                            tint = TextHint, modifier = Modifier.size(18.dp))
+                            tint = cs.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
                     }
                 }
             }
@@ -362,7 +348,7 @@ fun HomeScreen(
     longPressServer?.let { server ->
         ModalBottomSheet(
             onDismissRequest = { longPressServer = null },
-            containerColor = SurfaceElevated,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             tonalElevation = 0.dp
         ) {
             Column(modifier = Modifier
@@ -370,13 +356,12 @@ fun HomeScreen(
                 .padding(bottom = 40.dp)) {
                 Text(server.name,
                     style = MaterialTheme.typography.titleMedium,
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontWeight = FontWeight.Bold)
                 Text(server.address,
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 20.dp))
-
                 ServerAction(Icons.Filled.CheckCircle, "Выбрать", AccentBlue) {
                     onServerSelect(server); longPressServer = null
                 }
@@ -404,20 +389,22 @@ private fun TrafficCard(
     value: String,
     color: Color
 ) {
+    val cs = MaterialTheme.colorScheme
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
-            .background(SurfaceCard)
-            .border(1.dp, BorderColor, RoundedCornerShape(16.dp))
+            .background(cs.surfaceContainer)
+            .border(1.dp, cs.outline, RoundedCornerShape(16.dp))
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(icon, null, tint = color, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(10.dp))
         Column {
-            Text(label, style = MaterialTheme.typography.labelSmall, color = TextHint)
+            Text(label, style = MaterialTheme.typography.labelSmall,
+                color = cs.onSurfaceVariant.copy(alpha = 0.6f))
             Text(value, style = MaterialTheme.typography.bodyLarge,
-                color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                color = cs.onBackground, fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -425,7 +412,7 @@ private fun TrafficCard(
 @Composable
 private fun PingBadge(pingMs: Int, connected: Boolean) {
     val (color, text) = when {
-        !connected || pingMs < 0 -> Pair(TextHint, "—")
+        !connected || pingMs < 0 -> Pair(MaterialTheme.colorScheme.onSurfaceVariant, "—")
         pingMs < 80  -> Pair(ConnectedGreen, "${pingMs}мс")
         pingMs < 200 -> Pair(ConnectingYellow, "${pingMs}мс")
         else         -> Pair(DisconnectedRed, "${pingMs}мс")

@@ -38,6 +38,14 @@ async def init_db():
                 comment    TEXT,
                 created_at TEXT    NOT NULL DEFAULT (datetime('now'))
             );
+
+            CREATE TABLE IF NOT EXISTS pending_payments (
+                id         TEXT    PRIMARY KEY,
+                user_id    INTEGER NOT NULL,
+                coins      INTEGER NOT NULL,
+                amount_rub TEXT    NOT NULL,
+                created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+            );
         """)
         await db.commit()
     await _migrate()
@@ -264,6 +272,30 @@ async def get_referral_count(user_id: int) -> int:
         ) as cur:
             row = await cur.fetchone()
             return row[0] if row else 0
+
+
+# ─── Платежи ЮKassa ──────────────────────────────────────────────────────────
+
+async def save_pending_payment(payment_id: str, user_id: int, coins: int, amount_rub: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "INSERT OR IGNORE INTO pending_payments (id, user_id, coins, amount_rub) VALUES (?,?,?,?)",
+            (payment_id, user_id, coins, amount_rub),
+        )
+        await db.commit()
+
+
+async def get_all_pending_payments() -> list[dict]:
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT * FROM pending_payments ORDER BY created_at") as cur:
+            rows = await cur.fetchall()
+            return [await _row_to_dict(r, cur) for r in rows]
+
+
+async def delete_pending_payment(payment_id: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("DELETE FROM pending_payments WHERE id=?", (payment_id,))
+        await db.commit()
 
 
 # ─── Статистика ───────────────────────────────────────────────────────────────

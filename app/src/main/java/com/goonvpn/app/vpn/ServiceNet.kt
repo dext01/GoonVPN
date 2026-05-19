@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
@@ -230,6 +231,15 @@ misc:
     }
 
     private fun broadcastState(state: String) {
+        // Сохраняем состояние в prefs — при перезапуске приложения ViewModel его прочитает
+        val prefs = getSharedPreferences("goonvpn", Context.MODE_PRIVATE).edit()
+        prefs.putString("vpn_state", state)
+        if (state == STATE_CONNECTED) {
+            prefs.putLong("vpn_connect_time_ms", System.currentTimeMillis())
+        } else {
+            prefs.remove("vpn_connect_time_ms")
+        }
+        prefs.apply()
         sendBroadcast(Intent(BROADCAST_STATE).apply {
             putExtra(EXTRA_STATE, state)
             setPackage(packageName)

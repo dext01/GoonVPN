@@ -4,3 +4,4 @@ aiohttp==3.10.10
 python-dotenv==1.0.1
 qrcode[pil]==7.4.2
 Pillow==10.4.0
+yookassa==3.4.0

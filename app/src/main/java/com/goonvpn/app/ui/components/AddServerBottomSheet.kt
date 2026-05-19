@@ -39,16 +39,17 @@ fun AddServerBottomSheet(
     var isLoading by remember { mutableStateOf(false) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
 
+    val cs = MaterialTheme.colorScheme
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = Surface,
+        containerColor = cs.surfaceContainerHigh,
         dragHandle = {
             Box(
                 modifier = Modifier
                     .padding(top = 12.dp, bottom = 8.dp)
                     .width(40.dp).height(4.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(BorderColor)
+                    .background(cs.outline)
             )
         }
     ) {
@@ -56,7 +57,7 @@ fun AddServerBottomSheet(
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 20.dp)) {
                 if (mode != AddMode.MENU) {
                     IconButton(onClick = { mode = AddMode.MENU; textInput = ""; errorMsg = null }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = TextSecondary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = cs.onSurfaceVariant)
                     }
                     Spacer(Modifier.width(4.dp))
                 }
@@ -67,7 +68,7 @@ fun AddServerBottomSheet(
                         AddMode.SUBSCRIPTION -> "Подписка"
                     },
                     style = MaterialTheme.typography.titleLarge,
-                    color = TextPrimary,
+                    color = cs.onBackground,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -92,7 +93,7 @@ fun AddServerBottomSheet(
                 }
 
                 AddMode.MANUAL -> {
-                    Text("Ссылка vless://", style = MaterialTheme.typography.labelLarge, color = TextSecondary,
+                    Text("Ссылка vless://", style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant,
                         modifier = Modifier.padding(bottom = 10.dp))
                     UrlTextField(value = textInput, onValueChange = { textInput = it },
                         placeholder = "vless://uuid@host:port?...", maxLines = 4)
@@ -111,7 +112,7 @@ fun AddServerBottomSheet(
                 }
 
                 AddMode.SUBSCRIPTION -> {
-                    Text("URL подписки", style = MaterialTheme.typography.labelLarge, color = TextSecondary,
+                    Text("URL подписки", style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant,
                         modifier = Modifier.padding(bottom = 10.dp))
                     UrlTextField(value = textInput, onValueChange = { textInput = it; errorMsg = null },
                         placeholder = "https://example.com/sub?token=...", maxLines = 2)
@@ -121,7 +122,7 @@ fun AddServerBottomSheet(
                     Text(
                         "Сервер вернёт список серверов в формате Base64 или текст с vless:// ссылками",
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextHint
+                        color = cs.onSurfaceVariant.copy(alpha = 0.6f)
                     )
 
                     errorMsg?.let {
@@ -185,16 +186,17 @@ private fun fetchSubscription(url: String): List<String> {
 
 @Composable
 private fun UrlTextField(value: String, onValueChange: (String) -> Unit, placeholder: String, maxLines: Int) {
+    val cs = MaterialTheme.colorScheme
     OutlinedTextField(
         value = value, onValueChange = onValueChange,
-        placeholder = { Text(placeholder, color = TextHint, style = MaterialTheme.typography.bodySmall) },
+        placeholder = { Text(placeholder, color = cs.onSurfaceVariant.copy(0.5f), style = MaterialTheme.typography.bodySmall) },
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = AccentBlue, unfocusedBorderColor = BorderColor,
-            focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary,
+            focusedBorderColor = AccentBlue, unfocusedBorderColor = cs.outline,
+            focusedTextColor = cs.onBackground, unfocusedTextColor = cs.onBackground,
             cursorColor = AccentBlue,
-            focusedContainerColor = CardBackground, unfocusedContainerColor = CardBackground
+            focusedContainerColor = cs.surfaceContainer, unfocusedContainerColor = cs.surfaceContainer
         ),
         maxLines = maxLines
     )
@@ -202,12 +204,13 @@ private fun UrlTextField(value: String, onValueChange: (String) -> Unit, placeho
 
 @Composable
 private fun ActionButtons(onBack: () -> Unit, onConfirm: () -> Unit, confirmEnabled: Boolean, confirmLabel: String) {
+    val cs = MaterialTheme.colorScheme
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         OutlinedButton(
             onClick = onBack, modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
-            border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor)
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = cs.onSurfaceVariant),
+            border = androidx.compose.foundation.BorderStroke(1.dp, cs.outline)
         ) { Text("Назад") }
         Button(
             onClick = onConfirm, modifier = Modifier.weight(1f),
@@ -228,7 +231,7 @@ private fun BottomSheetOption(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(CardBackground)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
             .clickable(onClick = onClick)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -242,15 +245,15 @@ private fun BottomSheetOption(
         }
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = TextPrimary)
-            Text(subtitle, style = MaterialTheme.typography.labelMedium, color = TextSecondary)
+            Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
+            Text(subtitle, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (badge != null) {
             Text(badge, style = MaterialTheme.typography.labelMedium, color = accentColor,
                 modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(accentColor.copy(0.12f))
                     .padding(horizontal = 8.dp, vertical = 3.dp))
         } else {
-            Icon(Icons.Filled.ChevronRight, null, tint = TextHint, modifier = Modifier.size(20.dp))
+            Icon(Icons.Filled.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.5f), modifier = Modifier.size(20.dp))
         }
     }
 }

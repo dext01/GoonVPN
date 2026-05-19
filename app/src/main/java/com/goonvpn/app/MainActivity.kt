@@ -10,7 +10,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.*
@@ -37,11 +36,7 @@ class MainActivity : ComponentActivity() {
             val vm: VpnViewModel = viewModel()
             val themeMode by vm.themeMode.collectAsStateWithLifecycle()
             val systemDark = isSystemInDarkTheme()
-            val isDark = when (themeMode) {
-                1    -> false
-                2    -> true
-                else -> systemDark
-            }
+            val isDark = themeMode == 1
             GoonVPNTheme(isDark = isDark) {
                 MainNavigation(vm = vm)
             }
@@ -58,12 +53,11 @@ private data class TabItem(
 private val TABS = listOf(
     TabItem("home",     "Главная",   Icons.Filled.Home),
     TabItem("proxy",    "Прокси",    Icons.Filled.Wifi),
-    TabItem("profiles", "Профили",   Icons.Filled.Person),
     TabItem("settings", "Настройки", Icons.Filled.Settings)
 )
 
 // Экраны, у которых не показываем bottom bar
-private val SUB_ROUTES = setOf("apps", "profile", "logs")
+private val SUB_ROUTES = setOf("apps", "logs")
 
 @Composable
 private fun MainNavigation(vm: VpnViewModel = viewModel()) {
@@ -80,13 +74,7 @@ private fun MainNavigation(vm: VpnViewModel = viewModel()) {
     val downloadBytes  by vm.downloadBytes.collectAsStateWithLifecycle()
     val uploadBytes    by vm.uploadBytes.collectAsStateWithLifecycle()
 
-    val systemDark = isSystemInDarkTheme()
-    val isDark = when (themeMode) {
-        1    -> false
-        2    -> true
-        else -> systemDark
-    }
-    // isDark вычислен здесь для передачи в Settings — тема применяется в Activity
+    val isDark = themeMode == 1
 
     val snackbarHostState = remember { SnackbarHostState() }
     val snackbarMessage by vm.snackbar.collectAsStateWithLifecycle()
@@ -108,11 +96,11 @@ private fun MainNavigation(vm: VpnViewModel = viewModel()) {
     val showBottomBar = currentRoute !in SUB_ROUTES
 
     Scaffold(
-        containerColor = Background,
+        containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar(containerColor = NavBar, tonalElevation = 0.dp) {
+                NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLow, tonalElevation = 0.dp) {
                     TABS.forEach { tab ->
                         NavigationBarItem(
                             selected = currentRoute == tab.route,
@@ -177,23 +165,10 @@ private fun MainNavigation(vm: VpnViewModel = viewModel()) {
                     onPingAll            = { vm.pingAllServers() }
                 )
             }
-            composable("profiles") {
-                ProfilesListScreen(
-                    vlessUrl      = vlessUrl,
-                    isDark        = isDark,
-                    onEditProfile = { navController.navigate("profile") }
-                )
-            }
-            composable("profile") {
-                ProfileScreen(
-                    vlessUrl = vlessUrl,
-                    onSave   = { vm.saveVlessUrl(it) },
-                    onBack   = { navController.popBackStack() }
-                )
-            }
             composable("settings") {
                 SettingsScreen(
                     themeMode   = themeMode,
+                    isDark      = isDark,
                     onThemeMode = { vm.setThemeMode(it) },
                     onBack      = { navController.popBackStack() },
                     onOpenApps  = { navController.navigate("apps") },

@@ -19,11 +19,17 @@ from aiogram.types import (
     ReplyKeyboardMarkup,
 )
 
+import uuid as uuid_lib
+
+import yookassa
+from yookassa import Payment as YKPayment
+
 import database as db
 import xui_client as xui
 from config import (
     ADMIN_IDS, BOT_TOKEN, NOTIFY_DAYS_BEFORE,
     PLANS, REFERRAL_BONUS, REFERRAL_NEW_BONUS, TOPUP_OPTIONS,
+    YUKASSA_SHOP_ID, YUKASSA_SECRET, YUKASSA_TOPUP_OPTIONS,
 )
 from xui_client import INBOUND_ID
 from keyboards import (
@@ -36,6 +42,8 @@ from keyboards import (
     plans_keyboard,
     renew_plan_keyboard,
     topup_keyboard,
+    topup_method_keyboard,
+    topup_yukassa_keyboard,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -185,22 +193,28 @@ async def show_balance(event: Message | CallbackQuery):
         await event.answer(text, reply_markup=back_to_menu(), parse_mode="HTML")
 
 
-# ─── пополнение через Stars ───────────────────────────────────────────────────
+# ─── пополнение баланса ───────────────────────────────────────────────────────
 
 @router.message(Command("topup"))
 @router.callback_query(F.data == "topup_menu")
 async def topup_menu(event: Message | CallbackQuery):
-    text = (
-        "➕ <b>Пополнение баланса</b>\n\n"
-        "Выбери сумму. Оплата через Telegram Stars ⭐"
-    )
+    text = "➕ <b>Пополнение баланса</b>\n\nВыбери способ оплаты:"
     if isinstance(event, CallbackQuery):
-        await event.message.edit_text(text, reply_markup=topup_keyboard(), parse_mode="HTML")
+        await event.message.edit_text(text, reply_markup=topup_method_keyboard(), parse_mode="HTML")
     else:
-        await event.answer(text, reply_markup=topup_keyboard(), parse_mode="HTML")
+        await event.answer(text, reply_markup=topup_method_keyboard(), parse_mode="HTML")
 
 
-@router.callback_query(F.data.startswith("topup_") & ~F.data.startswith("topup_menu"))
+@router.callback_query(F.data == "topup_stars")
+async def cb_topup_stars(cb: CallbackQuery):
+    await cb.message.edit_text(
+        "⭐ <b>Пополнение через Telegram Stars</b>\n\nВыбери сумму:",
+        reply_markup=topup_keyboard(),
+        parse_mode="HTML",
+    )
+
+
+@router.callback_query(F.data.regexp(r'^topup_\d+_\d+$'))
 async def cb_topup_option(cb: CallbackQuery, bot: Bot):
     _, coins_str, stars_str = cb.data.split("_")
     coins = int(coins_str)
@@ -213,6 +227,65 @@ async def cb_topup_option(cb: CallbackQuery, bot: Bot):
         payload=f"topup|{coins}",
         currency="XTR",
         prices=[LabeledPrice(label=f"{coins} монет", amount=stars)],
+    )
+    await cb.answer()
+
+
+@router.callback_query(F.data == "topup_yukassa")
+async def cb_topup_yukassa(cb: CallbackQuery):
+    await cb.message.edit_text(
+        "💳 <b>Пополнение картой (ЮKassa)</b>\n\nВыбери сумму:",
+        reply_markup=topup_yukassa_keyboard(),
+        parse_mode="HTML",
+    )
+
+
+@router.callback_query(F.data.startswith("topupyk_"))
+async def cb_topupyk_option(cb: CallbackQuery):
+    if not YUKASSA_SHOP_ID or not YUKASSA_SECRET:
+        await cb.answer("Оплата картой временно недоступна", show_alert=True)
+        return
+
+    coins = int(cb.data[8:])
+    opt = next((o for o in YUKASSA_TOPUP_OPTIONS if o["coins"] == coins), None)
+    if not opt:
+        await cb.answer("Неверная сумма", show_alert=True)
+        return
+
+    yookassa.Configuration.account_id = YUKASSA_SHOP_ID
+    yookassa.Configuration.secret_key  = YUKASSA_SECRET
+
+    try:
+        payment = await asyncio.to_thread(
+            YKPayment.create,
+            {
+                "amount":       {"value": opt["rub"], "currency": "RUB"},
+                "confirmation": {"type": "redirect", "return_url": "https://t.me/vpngoon_bot"},
+                "capture":      True,
+                "description":  f"GoonVPN — {coins} монет",
+                "metadata":     {"user_id": cb.from_user.id, "coins": coins},
+            },
+            str(uuid_lib.uuid4()),
+        )
+    except Exception as e:
+        log.error(f"YooKassa payment create error: {e}")
+        await cb.answer("Ошибка создания платежа, попробуй позже", show_alert=True)
+        return
+
+    await db.save_pending_payment(payment.id, cb.from_user.id, coins, opt["rub"])
+
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💳 Перейти к оплате", url=payment.confirmation.confirmation_url)],
+        [InlineKeyboardButton(text="◀️ Назад", callback_data="topup_yukassa")],
+    ])
+
+    await cb.message.edit_text(
+        f"💳 <b>Оплата картой — {coins} монет</b>\n\n"
+        f"Сумма: <b>{opt['rub']} ₽</b>\n\n"
+        f"Нажми кнопку ниже для оплаты. Монеты зачислятся автоматически в течение минуты после оплаты.",
+        reply_markup=kb,
+        parse_mode="HTML",
     )
     await cb.answer()
 
@@ -649,6 +722,43 @@ async def cmd_broadcast(message: Message, command: CommandObject, bot: Bot):
 
 # ─── Фоновые задачи ───────────────────────────────────────────────────────────
 
+async def yukassa_check_loop(bot: Bot):
+    """Каждую минуту проверяет статус ожидающих платежей ЮKassa."""
+    if not YUKASSA_SHOP_ID or not YUKASSA_SECRET:
+        return
+    yookassa.Configuration.account_id = YUKASSA_SHOP_ID
+    yookassa.Configuration.secret_key  = YUKASSA_SECRET
+    while True:
+        await asyncio.sleep(60)
+        try:
+            pending = await db.get_all_pending_payments()
+            for p in pending:
+                try:
+                    payment = await asyncio.to_thread(YKPayment.find_one, p["id"])
+                    if payment.status == "succeeded":
+                        new_balance = await db.add_balance(
+                            p["user_id"], p["coins"], "yukassa",
+                            f"Пополнение {p['coins']} монет за {p['amount_rub']} ₽",
+                        )
+                        await db.delete_pending_payment(p["id"])
+                        try:
+                            await bot.send_message(
+                                p["user_id"],
+                                f"✅ <b>Оплата получена!</b>\n\n"
+                                f"Начислено: <b>{p['coins']} монет</b>\n"
+                                f"Новый баланс: <b>{new_balance} монет</b>",
+                                reply_markup=main_menu(),
+                                parse_mode="HTML",
+                            )
+                        except Exception:
+                            pass
+                    elif payment.status in ("canceled", "expired"):
+                        await db.delete_pending_payment(p["id"])
+                except Exception as e:
+                    log.warning(f"YooKassa check error for {p['id']}: {e}")
+        except Exception as e:
+            log.error(f"yukassa_check_loop error: {e}")
+
 async def cleanup_loop(bot: Bot):
     """Каждый час деактивирует просроченные подписки и отключает клиентов в x-ui."""
     while True:
@@ -718,6 +828,7 @@ async def main():
         ])
         asyncio.create_task(cleanup_loop(bot))
         asyncio.create_task(notify_loop(bot))
+        asyncio.create_task(yukassa_check_loop(bot))
 
     dp.startup.register(on_startup)
 

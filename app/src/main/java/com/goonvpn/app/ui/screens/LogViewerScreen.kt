@@ -33,10 +33,11 @@ fun LogViewerScreen(onBack: () -> Unit) {
         logText = withContext(Dispatchers.IO) { readLogs(context.filesDir) }
     }
 
+    val cs = MaterialTheme.colorScheme
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Background)
+            .background(cs.background)
             .systemBarsPadding()
     ) {
         // Header
@@ -47,12 +48,12 @@ fun LogViewerScreen(onBack: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = TextSecondary)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = cs.onSurfaceVariant)
             }
             Text(
                 "Логи",
                 style = MaterialTheme.typography.titleLarge,
-                color = TextPrimary,
+                color = cs.onBackground,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f)
             )
@@ -71,7 +72,7 @@ fun LogViewerScreen(onBack: () -> Unit) {
         Text(
             "Логи HEV-tunnel и Xray, конфиги. Обновляется при нажатии ↻",
             style = MaterialTheme.typography.bodySmall,
-            color = TextHint,
+            color = cs.onSurfaceVariant.copy(alpha = 0.6f),
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
         )
 
@@ -80,7 +81,7 @@ fun LogViewerScreen(onBack: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 12.dp, vertical = 8.dp)
-                .background(CardBackground, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                .background(cs.surfaceContainer, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
                 .padding(12.dp)
         ) {
             Column(
@@ -95,7 +96,7 @@ fun LogViewerScreen(onBack: () -> Unit) {
                         fontSize = 11.sp,
                         lineHeight = 16.sp
                     ),
-                    color = TextPrimary
+                    color = cs.onBackground
                 )
             }
         }

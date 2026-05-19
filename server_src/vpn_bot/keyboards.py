@@ -1,5 +1,5 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from config import PLANS, TOPUP_OPTIONS
+from config import PLANS, TOPUP_OPTIONS, YUKASSA_TOPUP_OPTIONS
 
 
 def main_menu() -> InlineKeyboardMarkup:
@@ -9,6 +9,7 @@ def main_menu() -> InlineKeyboardMarkup:
          InlineKeyboardButton(text="➕ Пополнить",        callback_data="topup_menu")],
         [InlineKeyboardButton(text="📋 Мои подписки",     callback_data="my_subs")],
         [InlineKeyboardButton(text="👥 Реферальная программа", callback_data="referral")],
+        [InlineKeyboardButton(text="💬 Обратная связь",   url="https://t.me/goonvpnadmin")],
     ])
 
 
@@ -23,6 +24,14 @@ def plans_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
+def topup_method_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⭐ Telegram Stars",   callback_data="topup_stars")],
+        [InlineKeyboardButton(text="💳 Оплата картой (ЮKassa)", callback_data="topup_yukassa")],
+        [InlineKeyboardButton(text="◀️ Назад",            callback_data="main_menu")],
+    ])
+
+
 def topup_keyboard() -> InlineKeyboardMarkup:
     rows = []
     for opt in TOPUP_OPTIONS:
@@ -30,7 +39,18 @@ def topup_keyboard() -> InlineKeyboardMarkup:
             text=f"{opt['coins']} монет за {opt['stars']} ⭐",
             callback_data=f"topup_{opt['coins']}_{opt['stars']}",
         )])
-    rows.append([InlineKeyboardButton(text="◀️ Назад", callback_data="main_menu")])
+    rows.append([InlineKeyboardButton(text="◀️ Назад", callback_data="topup_menu")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def topup_yukassa_keyboard() -> InlineKeyboardMarkup:
+    rows = []
+    for opt in YUKASSA_TOPUP_OPTIONS:
+        rows.append([InlineKeyboardButton(
+            text=f"{opt['coins']} монет за {opt['rub']} ₽",
+            callback_data=f"topupyk_{opt['coins']}",
+        )])
+    rows.append([InlineKeyboardButton(text="◀️ Назад", callback_data="topup_menu")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 

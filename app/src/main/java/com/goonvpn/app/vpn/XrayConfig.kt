@@ -75,6 +75,12 @@ object XrayConfig {
             put("protocol", "socks")
             put("settings", JSONObject().put("auth", "noauth").put("udp", true))
             put("tag", "socks-in")
+            // Sniффинг — извлекаем домен из TLS/HTTP трафика для domain-based роутинга
+            put("sniffing", JSONObject().apply {
+                put("enabled", true)
+                put("destOverride", JSONArray().put("http").put("tls"))
+                put("routeOnly", true)
+            })
         }
 
         val httpInbound = JSONObject().apply {
@@ -101,9 +107,9 @@ object XrayConfig {
         val ruDomainsRule = JSONObject().apply {
             put("type", "field")
             put("domain", JSONArray()
-                .put("suffix:.ru")
-                .put("suffix:.рф")
-                .put("suffix:.su")
+                .put("domain:ru")
+                .put("domain:xn--p1ai")
+                .put("domain:su")
                 .put("domain:vk.com")
                 .put("domain:ok.ru")
                 .put("domain:yandex.ru")

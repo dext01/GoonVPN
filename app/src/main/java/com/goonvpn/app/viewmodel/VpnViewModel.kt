@@ -97,6 +97,33 @@ class VpnViewModel(app: Application) : AndroidViewModel(app) {
             IntentFilter(ServiceNet.BROADCAST_STATE),
             Context.RECEIVER_NOT_EXPORTED
         )
+        // Если VPN был активен до того как приложение убили из недавних — восстанавливаем состояние
+        restoreVpnStateIfRunning()
+    }
+
+    private fun restoreVpnStateIfRunning() {
+        val ctx = getApplication<Application>()
+        val prefs = ctx.getSharedPreferences("goonvpn", Context.MODE_PRIVATE)
+        val savedState = prefs.getString("vpn_state", "") ?: ""
+        if (savedState == ServiceNet.STATE_CONNECTED && isServiceRunning()) {
+            _vpnState.value = VpnState.CONNECTED
+            // Вычисляем сколько секунд уже прошло с момента подключения
+            val connectTimeMs = prefs.getLong("vpn_connect_time_ms", 0L)
+            val elapsedSeconds = if (connectTimeMs > 0L)
+                ((System.currentTimeMillis() - connectTimeMs) / 1000).toInt()
+            else 0
+            startTimer(elapsedSeconds)
+            startStats()
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun isServiceRunning(): Boolean {
+        val am = getApplication<Application>()
+            .getSystemService(android.app.ActivityManager::class.java)
+        return am.getRunningServices(100).any {
+            it.service.className == ServiceNet::class.java.name
+        }
     }
 
     fun connect(permissionLauncher: ActivityResultLauncher<Intent>) {
@@ -214,17 +241,17 @@ class VpnViewModel(app: Application) : AndroidViewModel(app) {
         })
     }
 
-    private fun startTimer() {
+    private fun startTimer(initialSeconds: Int = 0) {
         timerJob?.cancel()
-        timerSeconds = 0
+        timerSeconds = initialSeconds
         timerJob = viewModelScope.launch {
             while (isActive) {
-                delay(1000)
-                timerSeconds++
                 val h = timerSeconds / 3600
                 val m = (timerSeconds % 3600) / 60
                 val s = timerSeconds % 60
                 _connectionTime.value = "%02d:%02d:%02d".format(h, m, s)
+                delay(1000)
+                timerSeconds++
             }
         }
     }

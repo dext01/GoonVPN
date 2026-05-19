@@ -69,6 +69,10 @@ def add_client(days: int, label: str) -> dict:
             "flow":       "",
             "id":         client_uuid,
             "limitIp":    3,
+            "rateLimit": {
+                "downMbps": 15,
+                "upMbps":   15,
+            },
             "reset":      0,
             "subId":      uuid.uuid4().hex[:16],
             "tgId":       0,

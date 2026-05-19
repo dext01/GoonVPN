@@ -19,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -29,6 +30,7 @@ import com.goonvpn.app.ui.theme.*
 @Composable
 fun SettingsScreen(
     themeMode: Int = 0,
+    isDark: Boolean = true,
     onThemeMode: (Int) -> Unit = {},
     onBack: () -> Unit,
     onOpenApps: () -> Unit,
@@ -46,9 +48,12 @@ fun SettingsScreen(
     var showResetDialog by remember { mutableStateOf(false) }
     var showDnsDialog   by remember { mutableStateOf(false) }
 
-    val bg      = Background
-    val textPri = TextPrimary
-    val textSec = TextSecondary
+    val bg                = if (isDark) Background    else Color(0xFFF2F5FA)
+    val cardBg            = if (isDark) SurfaceCard   else Color(0xFFFFFFFF)
+    val textPri           = if (isDark) TextPrimary   else Color(0xFF0D1117)
+    val textSec           = if (isDark) TextSecondary else Color(0xFF5A6578)
+    val border            = if (isDark) BorderColor   else Color(0xFFD0D9E8)
+    val switchUnchecked   = if (isDark) Color(0xFF3A4A5E) else Color(0xFFCDD5E0)
 
     val dnsLabels = listOf("Google (8.8.8.8)", "Cloudflare (1.1.1.1)", "AdGuard (94.140.14.14)")
 
@@ -71,8 +76,8 @@ fun SettingsScreen(
         }
 
         // ── ИНТЕРФЕЙС ──────────────────────────────────────────────────────
-        SectionLabel("ИНТЕРФЕЙС")
-        SettingsCard {
+        SectionLabel("ИНТЕРФЕЙС", textSec)
+        SettingsCard(cardBg) {
             // Theme selector row
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
@@ -81,24 +86,27 @@ fun SettingsScreen(
                 Icon(Icons.Filled.Palette, null, tint = AccentBlue, modifier = Modifier.size(22.dp))
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Тема оформления", color = TextPrimary,
+                    Text("Тема оформления", color = textPri,
                         style = MaterialTheme.typography.bodyMedium)
                 }
-                val themes = listOf("Системная", "Светлая", "Тёмная")
+                // 0 = Светлая, 1 = Тёмная
+                val themes = listOf("Светлая", "Тёмная")
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     themes.forEachIndexed { idx, label ->
                         val selected = themeMode == idx
                         Box(
-                            modifier = androidx.compose.ui.Modifier
-                                .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
-                                .background(if (selected) AccentBlue else CardBackground)
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (selected) AccentBlue else cardBg)
                                 .clickable { onThemeMode(idx) }
                                 .padding(horizontal = 8.dp, vertical = 4.dp),
-                            contentAlignment = androidx.compose.ui.Alignment.Center
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text(label,
-                                color = if (selected) androidx.compose.ui.graphics.Color.White else TextSecondary,
-                                style = MaterialTheme.typography.labelSmall)
+                            Text(
+                                label,
+                                color = if (selected) Color.White else textSec,
+                                style = MaterialTheme.typography.labelSmall
+                            )
                         }
                     }
                 }
@@ -108,72 +116,83 @@ fun SettingsScreen(
         Spacer(Modifier.height(20.dp))
 
         // ── ТУННЕЛЬ ────────────────────────────────────────────────────────
-        SectionLabel("ТУННЕЛЬ")
-        SettingsCard {
+        SectionLabel("ТУННЕЛЬ", textSec)
+        SettingsCard(cardBg) {
             SettingItem(Icons.Filled.Apps, "Приложения вне VPN",
                 if (settings.disallowedApps.isEmpty()) "Все приложения через VPN"
                 else "${settings.disallowedApps.size} исключено",
+                textPri = textPri,
                 onClick = onOpenApps
             )
-            HorizontalDivider(color = BorderColor, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
+            HorizontalDivider(color = border, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
 
-            // DNS — влияет на утечки DNS и приватность
             SettingItem(Icons.Filled.Dns, "DNS-сервер",
-                dnsLabels[dnsChoice.coerceIn(0, dnsLabels.lastIndex)]) {
-                showDnsDialog = true
-            }
-            HorizontalDivider(color = BorderColor, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
+                dnsLabels[dnsChoice.coerceIn(0, dnsLabels.lastIndex)],
+                textPri = textPri
+            ) { showDnsDialog = true }
+            HorizontalDivider(color = border, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
 
-            SettingToggle(Icons.AutoMirrored.Filled.CallSplit, "Фрагментирование", "Разбивать пакеты для обхода DPI",
+            SettingToggle(Icons.AutoMirrored.Filled.CallSplit, "Фрагментирование",
+                "Разбивать пакеты для обхода DPI",
+                textPri = textPri, textSec = textSec, uncheckedTrackColor = switchUnchecked,
                 checked = useFragment) { useFragment = it; settings.useFragmentation = it }
-            HorizontalDivider(color = BorderColor, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
+            HorizontalDivider(color = border, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
 
-            SettingToggle(Icons.AutoMirrored.Filled.CompareArrows, "Использовать MUX", "Мультиплексирование — несколько потоков в одном TCP",
+            SettingToggle(Icons.AutoMirrored.Filled.CompareArrows, "Использовать MUX",
+                "Мультиплексирование — несколько потоков в одном TCP",
+                textPri = textPri, textSec = textSec, uncheckedTrackColor = switchUnchecked,
                 checked = useMux) { useMux = it; settings.useMux = it }
-            HorizontalDivider(color = BorderColor, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
+            HorizontalDivider(color = border, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
 
-            SettingToggle(Icons.Filled.Lock, "Блок привязки к туннелю", "Запретить системным приложениям обходить VPN",
+            SettingToggle(Icons.Filled.Lock, "Блок привязки к туннелю",
+                "Запретить системным приложениям обходить VPN",
+                textPri = textPri, textSec = textSec, uncheckedTrackColor = switchUnchecked,
                 checked = blockBindToTun) { blockBindToTun = it; settings.blockBindToTun = it }
         }
 
         Spacer(Modifier.height(20.dp))
 
         // ── РАСШИРЕННЫЕ ────────────────────────────────────────────────────
-        SectionLabel("РАСШИРЕННЫЕ")
-        SettingsCard {
-            SettingItem(Icons.Filled.Shield, "Always-on VPN", "Открыть системные настройки") {
+        SectionLabel("РАСШИРЕННЫЕ", textSec)
+        SettingsCard(cardBg) {
+            SettingItem(Icons.Filled.Shield, "Always-on VPN", "Открыть системные настройки",
+                textPri = textPri) {
                 try { context.startActivity(Intent("android.net.vpn.SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
                 catch (_: Exception) { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
             }
-            HorizontalDivider(color = BorderColor, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
-            SettingToggle(Icons.Filled.Refresh, "Авто-переподключение", "Восстановить VPN если убит процесс",
+            HorizontalDivider(color = border, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
+            SettingToggle(Icons.Filled.Refresh, "Авто-переподключение",
+                "Восстановить VPN если убит процесс",
+                textPri = textPri, textSec = textSec, uncheckedTrackColor = switchUnchecked,
                 checked = autoReconnect) { autoReconnect = it; settings.autoReconnect = it }
-            HorizontalDivider(color = BorderColor, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
-            SettingToggle(Icons.Filled.Wifi, "Разрешить подключения из LAN", "Открыть прокси для локальной сети",
+            HorizontalDivider(color = border, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
+            SettingToggle(Icons.Filled.Wifi, "Разрешить подключения из LAN",
+                "Открыть прокси для локальной сети",
+                textPri = textPri, textSec = textSec, uncheckedTrackColor = switchUnchecked,
                 checked = allowLan) { allowLan = it; settings.allowLan = it }
         }
 
         Spacer(Modifier.height(20.dp))
 
         // ── ДРУГИЕ ─────────────────────────────────────────────────────────
-        SectionLabel("ДРУГИЕ")
-        SettingsCard {
+        SectionLabel("ДРУГИЕ", textSec)
+        SettingsCard(cardBg) {
             SettingItem(Icons.AutoMirrored.Filled.Notes, "Логи", "Просмотр журнала HEV и Xray",
-                onClick = onOpenLogs)
-            HorizontalDivider(color = BorderColor, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
+                textPri = textPri, onClick = onOpenLogs)
+            HorizontalDivider(color = border, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
             SettingItem(Icons.Filled.RestartAlt, "Сброс настроек", "Вернуть к заводским",
-                color = DisconnectedRed) { showResetDialog = true }
+                textPri = textPri, color = DisconnectedRed) { showResetDialog = true }
         }
 
         Spacer(Modifier.height(20.dp))
 
         // ── ИНФОРМАЦИЯ ─────────────────────────────────────────────────────
-        SectionLabel("ИНФОРМАЦИЯ")
-        SettingsCard {
-            InfoRow("Протокол", "VLESS + Reality")
-            InfoRow("Ядро", "Xray-core 25.9.11")
-            InfoRow("Туннель", "HEV-socks5-tunnel")
-            InfoRow("Версия", "1.5.0")
+        SectionLabel("ИНФОРМАЦИЯ", textSec)
+        SettingsCard(cardBg) {
+            InfoRow("Протокол", "VLESS + Reality", textPri, textSec)
+            InfoRow("Ядро", "Xray-core 25.9.11", textPri, textSec)
+            InfoRow("Туннель", "HEV-socks5-tunnel", textPri, textSec)
+            InfoRow("Версия", "1.6.0", textPri, textSec)
         }
 
         Spacer(Modifier.height(24.dp))
@@ -189,7 +208,7 @@ fun SettingsScreen(
                     Text(
                         "DNS влияет на приватность и защиту от DNS-утечек. Cloudflare и AdGuard не передают данные Google.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
                     listOf("Google (8.8.8.8 / 8.8.4.4)", "Cloudflare (1.1.1.1 / 1.0.0.1)", "AdGuard (94.140.14.14 / 94.140.15.15)")
@@ -207,13 +226,13 @@ fun SettingsScreen(
                                     colors = RadioButtonDefaults.colors(selectedColor = AccentBlue)
                                 )
                                 Spacer(Modifier.width(8.dp))
-                                Text(label, style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
+                                Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground)
                             }
                         }
                 }
             },
             confirmButton = {},
-            containerColor = SurfaceElevated
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
     }
 
@@ -236,23 +255,26 @@ fun SettingsScreen(
                     Text("Отмена")
                 }
             },
-            containerColor = SurfaceElevated
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
     }
 }
 
 @Composable
-private fun SectionLabel(text: String) {
-    Text(text, style = MaterialTheme.typography.labelMedium, color = TextSecondary,
+private fun SectionLabel(text: String, textSec: Color = TextSecondary) {
+    Text(text, style = MaterialTheme.typography.labelMedium, color = textSec,
         modifier = Modifier.padding(bottom = 10.dp, start = 4.dp))
 }
 
 @Composable
-private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
+private fun SettingsCard(
+    background: Color = SurfaceCard,
+    content: @Composable ColumnScope.() -> Unit
+) {
     Column(
         modifier = Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(SurfaceCard)
+            .background(background)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         content = content
     )
@@ -263,7 +285,8 @@ private fun SettingItem(
     icon: ImageVector,
     title: String,
     subtitle: String,
-    color: androidx.compose.ui.graphics.Color = TextPrimary,
+    textPri: Color = TextPrimary,
+    color: Color = TextPrimary,
     onClick: () -> Unit
 ) {
     Row(
@@ -276,8 +299,9 @@ private fun SettingItem(
         Icon(icon, null, tint = if (color == TextPrimary) AccentBlue else color, modifier = Modifier.size(22.dp))
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = color, style = MaterialTheme.typography.bodyLarge)
-            Text(subtitle, color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+            Text(title, color = if (color == TextPrimary) textPri else color,
+                style = MaterialTheme.typography.bodyLarge)
+            Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
         }
         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = TextHint)
     }
@@ -289,6 +313,9 @@ private fun SettingToggle(
     title: String,
     subtitle: String,
     checked: Boolean,
+    textPri: Color = TextPrimary,
+    textSec: Color = TextSecondary,
+    uncheckedTrackColor: Color = Color(0xFF3A4A5E),
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
@@ -298,21 +325,28 @@ private fun SettingToggle(
         Icon(icon, null, tint = AccentBlue, modifier = Modifier.size(22.dp))
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = TextPrimary, style = MaterialTheme.typography.bodyLarge)
-            Text(subtitle, color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+            Text(title, color = textPri, style = MaterialTheme.typography.bodyLarge)
+            Text(subtitle, color = textSec, style = MaterialTheme.typography.bodySmall)
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(checkedTrackColor = AccentBlue))
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedTrackColor = AccentBlue,
+                uncheckedTrackColor = uncheckedTrackColor,
+                uncheckedThumbColor = Color.White
+            )
+        )
     }
 }
 
 @Composable
-private fun InfoRow(label: String, value: String) {
+private fun InfoRow(label: String, value: String, textPri: Color = TextPrimary, textSec: Color = TextSecondary) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
-        Text(value, color = TextPrimary, style = MaterialTheme.typography.bodyMedium)
+        Text(label, color = textSec, style = MaterialTheme.typography.bodyMedium)
+        Text(value, color = textPri, style = MaterialTheme.typography.bodyMedium)
     }
 }

@@ -26,7 +26,6 @@ import com.goonvpn.app.ui.theme.*
 // Режим маршрутизации: глобальный (весь трафик через VPN) или раздельный (только зарубежный)
 enum class RoutingMode(val label: String, val description: String) {
     GLOBAL("Глобальный", "Весь трафик через VPN"),
-    BYPASS_LAN("Обход LAN", "Локальная сеть идёт напрямую"),
     SPLIT("Раздельный", "Только зарубежный трафик через VPN")
 }
 
@@ -45,9 +44,11 @@ fun ProxyScreen(
     val context = LocalContext.current
     val settings = remember { SettingsRepository(context) }
 
-    val bg      = Background
-    val textPri = TextPrimary
-    val textSec = TextSecondary
+    val cs      = MaterialTheme.colorScheme
+    val bg      = cs.background
+    val cardBg  = cs.surfaceContainer
+    val textPri = cs.onBackground
+    val textSec = cs.onSurfaceVariant
     val accent  = AccentBlue
 
     var showAddSheet by remember { mutableStateOf(false) }
@@ -79,7 +80,13 @@ fun ProxyScreen(
             }
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 // Пинг всех серверов
-                IconButton(onClick = onPingAll) {
+                Column(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable(onClick = onPingAll)
+                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Box(
                         Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))
                             .background(accent.copy(0.15f)),
@@ -87,6 +94,7 @@ fun ProxyScreen(
                     ) {
                         Icon(Icons.Filled.Speed, null, tint = accent, modifier = Modifier.size(20.dp))
                     }
+                    Text("Пинг", style = MaterialTheme.typography.labelSmall, color = accent)
                 }
                 // Добавить сервер
                 IconButton(onClick = { showAddSheet = true }) {
@@ -107,7 +115,7 @@ fun ProxyScreen(
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(SurfaceCard)
+                .background(cardBg)
                 .clickable { showRoutingDialog = true }
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -132,7 +140,7 @@ fun ProxyScreen(
                     Spacer(Modifier.height(12.dp))
                     Text("Нет серверов", color = textSec, style = MaterialTheme.typography.bodyLarge)
                     Spacer(Modifier.height(4.dp))
-                    Text("Нажмите + чтобы добавить", color = TextHint,
+                    Text("Нажмите + чтобы добавить", color = textSec.copy(alpha = 0.5f),
                         style = MaterialTheme.typography.bodySmall)
                 }
             }
@@ -186,15 +194,15 @@ fun ProxyScreen(
                             )
                             Spacer(Modifier.width(8.dp))
                             Column {
-                                Text(mode.label, style = MaterialTheme.typography.bodyLarge, color = TextPrimary)
-                                Text(mode.description, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                                Text(mode.label, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onBackground)
+                                Text(mode.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
                 }
             },
             confirmButton = {},
-            containerColor = SurfaceElevated
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
     }
 
@@ -215,9 +223,11 @@ private fun ServerRow(
     onSelect: () -> Unit,
     onDelete: () -> Unit
 ) {
-    val cardBg = if (isSelected) AccentBlueDim else SurfaceCard
+    val cardBg = if (isSelected) AccentBlueDim else MaterialTheme.colorScheme.surfaceContainer
+    val nameColor = if (isSelected || isDark) TextPrimary else androidx.compose.ui.graphics.Color(0xFF0D1117)
+    val subColor  = if (isSelected || isDark) TextSecondary else androidx.compose.ui.graphics.Color(0xFF5A6578)
     val pingColor = when {
-        server.pingMs < 0   -> TextHint
+        server.pingMs < 0   -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
         server.pingMs < 80  -> ConnectedGreen
         server.pingMs < 200 -> ConnectingYellow
         else                -> DisconnectedRed
@@ -236,9 +246,9 @@ private fun ServerRow(
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(server.name, style = MaterialTheme.typography.titleMedium,
-                color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                color = nameColor, fontWeight = FontWeight.SemiBold)
             Text("${server.address}:${server.port}", style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary)
+                color = subColor)
             Text(server.protocol, style = MaterialTheme.typography.labelSmall, color = AccentBlue)
         }
         Column(horizontalAlignment = Alignment.End) {
@@ -250,7 +260,7 @@ private fun ServerRow(
                     modifier = Modifier.size(18.dp))
             } else {
                 IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Filled.Close, null, tint = TextHint, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Filled.Close, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.4f), modifier = Modifier.size(16.dp))
                 }
             }
         }
