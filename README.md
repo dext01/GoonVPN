@@ -4,7 +4,7 @@
 
 ## Скачать
 
-**[GoonVPN-v1.6.apk](https://github.com/dext01/upprpo_project_vpn/blob/main/releases/GoonVPN-v1.6.apk)** — установи на Android (разрешить установку из неизвестных источников)
+**[GoonVPN-v1.7.apk](https://github.com/dext01/GoonVPN/releases/latest)** — установи на Android (разрешить установку из неизвестных источников)
 
 > Требования: Android 8.0+
 
@@ -122,8 +122,8 @@ app/src/main/java/com/goonvpn/app/
 ## Сборка из исходников
 
 ```bash
-git clone https://github.com/dext01/vpn_project
-cd vpn_project
+git clone https://github.com/dext01/GoonVPN
+cd GoonVPN
 ./gradlew assembleDebug
 # APK будет в app/build/outputs/apk/debug/
 ```
@@ -138,7 +138,7 @@ cd vpn_project
 |-----------|-----------|
 | UI | Jetpack Compose + Material3 |
 | Архитектура | MVVM, StateFlow, ViewModel |
-| VPN-ядро | Xray-core 25.x |
+| VPN-ядро | Xray-core 26.3.27 |
 | Туннель | HEV-socks5-tunnel |
 | Протокол | VLESS + Reality (TLS) |
 | Язык | Kotlin |

@@ -21,7 +21,7 @@ object XrayConfig {
 
         val realitySettings = JSONObject().apply {
             put("serverName", params.serverName)
-            put("fingerprint", params.fingerprint.ifEmpty { "chrome" })
+            put("fingerprint", "randomized")
             put("publicKey", params.publicKey)
             put("shortId", params.shortId)
             put("spiderX", params.spiderX.ifEmpty { "/" })
@@ -141,7 +141,7 @@ object XrayConfig {
         }
 
         val root = JSONObject().apply {
-            put("log", JSONObject().put("loglevel", "info"))
+            put("log", JSONObject().put("loglevel", "warning"))
             put("inbounds", JSONArray().put(socksInbound).put(httpInbound))
             put("outbounds", JSONArray().put(proxyOutbound).put(directOutbound).put(blockOutbound))
             put("routing", routing)
